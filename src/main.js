@@ -1,4 +1,4 @@
-import { createGameState, createProfile } from "./game/simulation/state.js";
+import { createGameState, createProfile, normalizeGameState } from "./game/simulation/state.js";
 import { loadState, saveState } from "./game/simulation/persistence.js";
 import { GameplayScene } from "./phaser/scenes/GameplayScene.js";
 
@@ -7,7 +7,7 @@ const gameScreen = document.getElementById("game-screen");
 const accountForm = document.getElementById("account-form");
 
 let phaserGame = null;
-let state = loadState();
+let state = normalizeGameState(loadState());
 const stateRef = {
   get: () => state,
   set: (next) => {

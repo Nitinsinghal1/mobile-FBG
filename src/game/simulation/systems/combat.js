@@ -1,6 +1,12 @@
 import { WORLD_SIZE, getWorld } from "../../content/worlds.js";
 import { chooseMonsterIntent, updateAdaptiveMemory } from "./aiDirector.js";
 import { recordWorldConquest, resolveDeath, recoverExpiredRevives, calculateLeaderboardScore } from "./progression.js";
+import {
+  calculateIncomingDamage,
+  createLootDrop,
+  resetWorldSurvival,
+  updateSurvivalSystems
+} from "./survival.js";
 
 const PLAYER_SPEED = 250;
 const SPRINT_SPEED = 330;
@@ -72,6 +78,7 @@ export function spawnWorldEntities(state, worldId) {
 export function teleportToWorld(state, worldId) {
   let next = structuredClone(state);
   if (!next.worlds.some((world) => world.id === worldId)) return next;
+  next = resetWorldSurvival(next, worldId);
   next.currentWorldId = worldId;
   next.player.x = WORLD_SIZE.width / 2;
   next.player.y = WORLD_SIZE.height / 2;
@@ -133,6 +140,7 @@ export function updateCombat(state, actions, deltaMs, now = Date.now()) {
 
   next = updateMonsters(next, delta, deltaMs);
   next = resolveProjectileHits(next);
+  next = updateSurvivalSystems(next, deltaMs);
   next = resolveWorldProgress(next);
   next.leaderboardScore = calculateLeaderboardScore(next);
   return next.player.hp <= 0 ? resolveDeath(next, "player", now) : next;
@@ -217,18 +225,24 @@ function updateMonsters(state, delta, deltaMs) {
         color: 0xf4c15d,
         life: 900
       });
+      const loot = createLootDrop(monster, next);
+      if (loot) next.loot.push(loot);
       continue;
     }
 
     const intent = chooseMonsterIntent(monster, next);
-    const dx = next.player.x - monster.x;
-    const dy = next.player.y - monster.y;
-    const distance = Math.hypot(dx, dy) || 1;
+    const lureActive = next.survival.lure && next.survival.lure.until > next.time;
+    const lureDistance = lureActive ? Math.hypot(monster.x - next.survival.lure.x, monster.y - next.survival.lure.y) : Infinity;
+    const target = lureDistance < 640 ? next.survival.lure : next.player;
+    const dx = target.x - monster.x;
+    const dy = target.y - monster.y;
+    const targetDistance = Math.hypot(dx, dy) || 1;
+    const playerDistance = Math.hypot(next.player.x - monster.x, next.player.y - monster.y) || 1;
     const baseSpeed = monster.isCommander || monster.isDemonKing ? COMMANDER_SPEED : MONSTER_SPEED;
     const speed = monster.slowedFor > 0 ? baseSpeed * 0.48 : baseSpeed;
     const flank = intent === "flank" ? Math.PI / 2 : 0;
     const angle = Math.atan2(dy, dx) + flank;
-    const guardScale = intent === "guard-gate" && distance < 220 ? -0.35 : 1;
+    const guardScale = intent === "guard-gate" && targetDistance < 220 ? -0.35 : 1;
 
     monster.x = clamp(monster.x + Math.cos(angle) * speed * guardScale * delta, 30, WORLD_SIZE.width - 30);
     monster.y = clamp(monster.y + Math.sin(angle) * speed * guardScale * delta, 30, WORLD_SIZE.height - 30);
@@ -236,8 +250,8 @@ function updateMonsters(state, delta, deltaMs) {
     monster.slowedFor = Math.max(0, (monster.slowedFor || 0) - deltaMs);
     monster.attackTimer = Math.max(0, monster.attackTimer - deltaMs);
 
-    if (!next.player.spawnProtected && distance < monster.radius + 34 && monster.attackTimer <= 0) {
-      next.player.hp -= monster.damage;
+    if (!next.player.spawnProtected && playerDistance < monster.radius + 34 && monster.attackTimer <= 0) {
+      next.player.hp -= calculateIncomingDamage(next, monster.damage);
       monster.attackTimer = monster.isDemonKing ? 580 : 760;
     }
     aliveMonsters.push(monster);

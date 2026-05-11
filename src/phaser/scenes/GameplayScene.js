@@ -13,6 +13,9 @@ export class GameplayScene extends Phaser.Scene {
     this.keys = null;
     this.monsterSprites = new Map();
     this.projectileSprites = new Map();
+    this.lootSprites = new Map();
+    this.shrineSprites = new Map();
+    this.pingSprites = new Map();
   }
 
   init(data = {}) {
@@ -75,6 +78,7 @@ export class GameplayScene extends Phaser.Scene {
   createWorldLayer() {
     this.worldGraphics = this.add.graphics();
     this.gridGraphics = this.add.graphics();
+    this.zoneGraphics = this.add.graphics();
     this.backgroundLabel = this.add.text(60, 60, "", {
       fontFamily: "system-ui",
       fontSize: "42px",
@@ -85,8 +89,14 @@ export class GameplayScene extends Phaser.Scene {
   rebuildWorld() {
     this.monsterSprites.forEach((sprite) => sprite.destroy());
     this.projectileSprites.forEach((sprite) => sprite.destroy());
+    this.lootSprites.forEach((sprite) => sprite.destroy());
+    this.shrineSprites.forEach((sprite) => sprite.destroy());
+    this.pingSprites.forEach((sprite) => sprite.destroy(true));
     this.monsterSprites.clear();
     this.projectileSprites.clear();
+    this.lootSprites.clear();
+    this.shrineSprites.clear();
+    this.pingSprites.clear();
     this.drawWorld();
     this.renderState(this.stateRef.get());
     updateHud(this.hud, this.stateRef.get());
@@ -145,6 +155,10 @@ export class GameplayScene extends Phaser.Scene {
     this.powerAura.setPosition(state.player.x, state.player.y);
     this.powerAura.setFillStyle(state.profile.power.color, 0.18 + Math.sin(state.time / 180) * 0.04);
     this.dungeonSeal.setRotation(state.time / 2200);
+    this.renderZone(state);
+    this.renderLoot(state);
+    this.renderShrines(state);
+    this.renderPings(state);
 
     const seenMonsters = new Set();
     for (const monster of state.monsters) {
@@ -156,7 +170,8 @@ export class GameplayScene extends Phaser.Scene {
       }
       sprite.setPosition(monster.x, monster.y);
       sprite.setScale(monster.isDemonKing ? 1.24 : 1);
-      sprite.setAlpha(monster.intent === "flank" ? 0.82 : 1);
+      sprite.setAlpha(monster.revealedUntil > state.time ? 1 : monster.intent === "flank" ? 0.82 : 1);
+      sprite.setTint(monster.revealedUntil > state.time ? 0xf4c15d : 0xffffff);
       seenMonsters.add(monster.id);
     }
     for (const [id, sprite] of this.monsterSprites.entries()) {
@@ -182,6 +197,90 @@ export class GameplayScene extends Phaser.Scene {
       if (!seenProjectiles.has(id)) {
         sprite.destroy();
         this.projectileSprites.delete(id);
+      }
+    }
+  }
+
+  renderZone(state) {
+    this.zoneGraphics.clear();
+    this.zoneGraphics.lineStyle(8, 0xe85d75, 0.72);
+    this.zoneGraphics.strokeCircle(state.zone.x, state.zone.y, state.zone.radius);
+    this.zoneGraphics.lineStyle(2, 0xf4c15d, 0.38);
+    this.zoneGraphics.strokeCircle(state.zone.x, state.zone.y, Math.max(40, state.zone.radius - 30));
+  }
+
+  renderLoot(state) {
+    const seen = new Set();
+    const tintByKind = {
+      potion: 0xe85d75,
+      armor: 0x83a9ff,
+      crystal: 0x8d6cff,
+      artifact: 0xf4c15d
+    };
+    for (const loot of state.loot) {
+      let sprite = this.lootSprites.get(loot.id);
+      if (!sprite) {
+        sprite = this.add.image(loot.x, loot.y, "loot-drop");
+        this.lootSprites.set(loot.id, sprite);
+      }
+      sprite.setPosition(loot.x, loot.y);
+      sprite.setTint(tintByKind[loot.kind] || 0x5ec6a8);
+      sprite.setScale(1 + Math.sin((state.time + loot.x) / 260) * 0.08);
+      seen.add(loot.id);
+    }
+    for (const [id, sprite] of this.lootSprites.entries()) {
+      if (!seen.has(id)) {
+        sprite.destroy();
+        this.lootSprites.delete(id);
+      }
+    }
+  }
+
+  renderShrines(state) {
+    const seen = new Set();
+    for (const shrine of state.reviveShrines) {
+      let sprite = this.shrineSprites.get(shrine.id);
+      if (!sprite) {
+        sprite = this.add.image(shrine.x, shrine.y, "revive-shrine");
+        this.shrineSprites.set(shrine.id, sprite);
+      }
+      sprite.setPosition(shrine.x, shrine.y);
+      sprite.setAlpha(shrine.active ? 0.92 : 0.28);
+      sprite.setTint(shrine.active ? 0xf4c15d : 0x606875);
+      seen.add(shrine.id);
+    }
+    for (const [id, sprite] of this.shrineSprites.entries()) {
+      if (!seen.has(id)) {
+        sprite.destroy();
+        this.shrineSprites.delete(id);
+      }
+    }
+  }
+
+  renderPings(state) {
+    const seen = new Set();
+    for (const ping of state.pings) {
+      let marker = this.pingSprites.get(ping.id);
+      if (!marker) {
+        marker = this.add.container(ping.x, ping.y);
+        marker.add(this.add.image(0, 0, "ping-marker").setTint(0xe85d75));
+        marker.add(this.add.text(18, -18, ping.text, {
+          fontFamily: "system-ui",
+          fontSize: "18px",
+          color: "#f3f7ff",
+          backgroundColor: "rgba(16,21,27,0.72)",
+          padding: { x: 6, y: 4 }
+        }));
+        this.pingSprites.set(ping.id, marker);
+      }
+      marker.setPosition(ping.x, ping.y);
+      marker.setAlpha(Math.min(1, ping.life / 1200));
+      seen.add(ping.id);
+    }
+    for (const [id, marker] of this.pingSprites.entries()) {
+      if (!seen.has(id)) {
+        marker.destroy(true);
+        this.pingSprites.delete(id);
       }
     }
   }

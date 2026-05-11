@@ -12,6 +12,7 @@ This repository is a production-oriented vertical slice. It is not a complete on
 - Phaser loads from the jsDelivr CDN
 - Local storage is used for save data and leaderboard records
 - Chat, forum, and AI behavior are simulated locally as backend-ready surfaces
+- New survival systems include world corruption, auto-loot, tactical artifacts, squad pings, and revive shrines
 
 ## Quick Start
 
@@ -45,6 +46,9 @@ Validated areas:
 - Temporary mission alliances are supported
 - Death timers match the requested rules
 - Sanctuary shield does not allow passive dungeon progress
+- Corruption zones damage players outside safe magic
+- Auto-loot equips superior armor and clears picked drops
+- Tactical artifacts, pings, and shrine recall are covered by simulation tests
 - JavaScript syntax checks pass across source, scripts, and tests
 
 ## Game Loop
@@ -53,12 +57,15 @@ Validated areas:
 2. The fate engine assigns a magic bloodline.
 3. Enter the first world with a temporary sanctuary shield.
 4. Move, attack, cast powers, and survive monster pressure.
-5. Teleport between the four worlds.
-6. Defeat monsters, commanders, and dungeon threats.
-7. Conquer a world to unlock reward gear and a story decision.
-8. Make choices that affect trust, allies, score, and future routes.
-9. Conquer all four worlds to win.
-10. Rank by world progress, skill, reward score, story choices, and team level.
+5. Stay inside the shrinking corruption zone or take damage.
+6. Auto-loot stronger armor, potions, crystals, and tactical artifacts from defeated enemies.
+7. Use artifacts, pings, and revive shrines to keep the run alive.
+8. Teleport between the four worlds.
+9. Defeat monsters, commanders, and dungeon threats.
+10. Conquer a world to unlock reward gear and a story decision.
+11. Make choices that affect trust, allies, score, and future routes.
+12. Conquer all four worlds to win.
+13. Rank by world progress, skill, reward score, story choices, and team level.
 
 ## Player Modes
 
@@ -73,6 +80,7 @@ Team mode creates four named hero companions. Team death rules follow the reques
 - If one member falls and at least one player survives, defeated members return after 30 minutes.
 - If the whole team is wiped, the team can deploy again after 1 day.
 - Temporary mission alliances can be created through story choices.
+- Revive shrines can recall fallen team members when the surviving player reaches an active shrine.
 
 ## Magic Powers
 
@@ -104,6 +112,8 @@ Each world has:
 - Teleport gate
 - Conquest progress
 - Reward/story trigger
+- A shrinking corruption zone that forces movement toward danger and objectives
+- Two revive shrines for team recovery
 
 ## Enemies And Story Roster
 
@@ -130,6 +140,18 @@ World conquest can unlock special weapons and outfits, including:
 
 Rewards contribute to leaderboard score and are stored in the local save state.
 
+## Survival And Tactical Systems
+
+The current build adds several battle-royale-inspired systems reshaped for the magic world:
+
+- World corruption: a shrinking danger ring damages players outside safe magic.
+- Auto-loot: nearby drops are picked up automatically for mobile comfort.
+- Superior armor: stronger runic armor auto-equips when found.
+- Potions and crystals: supplies restore health, mana, and artifact charges.
+- Tactical artifacts: Seer Orb, Shield Totem, Rift Anchor, and Monster Lure provide scouting, defense, control, and monster manipulation.
+- Squad pings: quick tactical marks can be sent for enemies, monsters, dungeons, teleport gates, healing, retreat, and attack calls.
+- Revive shrines: team mode can recover fallen allies through active shrines.
+
 ## Story Branching
 
 After a world conquest, the player receives story choices. Choices can affect:
@@ -150,7 +172,7 @@ The current system calculates exponential possible routes from repeated decision
 - Attack: fire a magic projectile
 - Power: cast bloodline ability
 - Dash: sprint while mana is available
-- Menu: open world, team, chat, and forum panels
+- Menu: open world, gear, team, pings, chat, and forum panels
 
 ### Desktop
 
@@ -167,6 +189,7 @@ The HUD is designed for a phone-first playfield:
 - Top strip shows identity, power, health, mana, and world status.
 - Bottom strip keeps movement and action buttons near thumbs.
 - Side drawer holds dense systems like teleport, team, chat, and forum.
+- Gear and ping panels keep tactical controls out of the playfield until needed.
 - Sanctuary shield prevents instant punishment while a new player reads the HUD.
 - Dungeon progress is disabled while sanctuary shield is active, so progression still requires real engagement.
 
@@ -198,6 +221,7 @@ Important rule: Phaser renders the game, but simulation state is the source of t
 - `src/game/simulation/systems/combat.js` - movement, combat, monster behavior, teleporting
 - `src/game/simulation/systems/progression.js` - conquest, rewards, death timers, leaderboard scoring
 - `src/game/simulation/systems/aiDirector.js` - local power selection, adaptive memory, NPC/story decisions
+- `src/game/simulation/systems/survival.js` - corruption zones, auto-loot, artifacts, pings, and revive shrines
 - `src/ui/hud.js` - mobile HUD, drawer panels, chat/forum, story modal
 - `docs/production-architecture.md` - production backend and AI service notes
 
@@ -277,6 +301,7 @@ Mobile wrapper path:
 - AI is deterministic/local rather than hosted
 - Art is procedural/simple placeholder art
 - Combat is a 2D top-down vertical slice, not a full 3D shooter
+- Tactical systems are local simulation rules, not network-authoritative yet
 
 ## GitHub Publish Notes
 

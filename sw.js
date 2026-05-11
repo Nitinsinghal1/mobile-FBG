@@ -1,4 +1,4 @@
-const CACHE_NAME = "four-worlds-battleground-v6";
+const CACHE_NAME = "four-worlds-battleground-v7";
 const OFFLINE_ASSETS = [
   "/",
   "/index.html",

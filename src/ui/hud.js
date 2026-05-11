@@ -1,6 +1,7 @@
 import { WORLDS, getWorld } from "../game/content/worlds.js";
 import { applyStoryChoice, updateLeaderboard } from "../game/simulation/systems/progression.js";
 import { chooseNpcEvent } from "../game/simulation/systems/aiDirector.js";
+import { getPingTypes, recallAtShrine, sendPing, useArtifact } from "../game/simulation/systems/survival.js";
 import { saveLeaderboardEntry, saveState, clearState } from "../game/simulation/persistence.js";
 
 export function createHud(root, state, commands) {
@@ -21,7 +22,9 @@ export function createHud(root, state, commands) {
       <div class="side-drawer" data-panel="drawer">
         <div class="drawer-tabs">
           <button class="hud-button is-active" data-tab="worlds">Worlds</button>
+          <button class="hud-button" data-tab="gear">Gear</button>
           <button class="hud-button" data-tab="team">Team</button>
+          <button class="hud-button" data-tab="pings">Pings</button>
           <button class="hud-button" data-tab="chat">Chat</button>
           <button class="hud-button" data-tab="forum">Forum</button>
         </div>
@@ -88,10 +91,12 @@ export function updateHud(hud, state) {
     .join("");
   const world = getWorld(state.currentWorldId);
   const worldState = state.worlds.find((item) => item.id === state.currentWorldId);
+  const outsideZone = Math.max(0, Math.round(Math.hypot(state.player.x - state.zone.x, state.player.y - state.zone.y) - state.zone.radius));
   hud.fields.objective.innerHTML = `
     <strong>${world.name} ${Math.floor(worldState.progress)}%</strong>
     ${world.objective}<br />
-    Dungeon: ${world.dungeon}. Hazard: ${world.hazard}.${state.player.spawnProtected ? "<br />Sanctuary shield active until first action." : ""}
+    Dungeon: ${world.dungeon}. Hazard: ${world.hazard}.<br />
+    Corruption: stage ${state.zone.stage}${outsideZone ? `, ${outsideZone}m outside` : ", safe"}.${state.player.spawnProtected ? "<br />Sanctuary shield active until first action." : ""}
   `;
   hud.fields.drawer.classList.toggle("is-open", hud.drawerOpen);
   hud.fields.toast.textContent = state.toast || "";
@@ -108,6 +113,8 @@ function wireHud(hud) {
     const tab = button.dataset.tab;
     const teleport = button.dataset.teleport;
     const choice = button.dataset.choice;
+    const artifact = button.dataset.artifact;
+    const ping = button.dataset.ping;
 
     if (action === "menu") {
       hud.drawerOpen = !hud.drawerOpen;
@@ -115,6 +122,8 @@ function wireHud(hud) {
       hud.commands.requestRender();
     } else if (action === "reset") {
       hud.commands.reset();
+    } else if (action === "recall") {
+      hud.commands.recall();
     } else if (action === "attack") {
       hud.commands.setButtonAction("attack", true);
       setTimeout(() => hud.commands.setButtonAction("attack", false), 80);
@@ -133,6 +142,10 @@ function wireHud(hud) {
       hud.commands.teleport(teleport);
     } else if (choice) {
       hud.commands.chooseStory(choice);
+    } else if (artifact) {
+      hud.commands.useArtifact(artifact);
+    } else if (ping) {
+      hud.commands.ping(ping);
     }
   });
 
@@ -187,6 +200,10 @@ function renderDrawer(hud, state) {
     state.currentWorldId,
     state.worlds.map((world) => `${world.id}:${Math.floor(world.progress)}:${world.conquered}`).join(","),
     state.inventory.map((item) => item.id).join(","),
+    `${state.supplies.armorLevel}:${state.supplies.potions}:${state.supplies.crystals}`,
+    state.artifacts.map((item) => `${item.id}:${item.charges}`).join(","),
+    state.reviveShrines.map((item) => `${item.id}:${item.active}:${item.cooldownUntil}`).join(","),
+    state.pings.length,
     state.team.level,
     state.team.temporaryAllies,
     state.chat.team.length,
@@ -198,7 +215,9 @@ function renderDrawer(hud, state) {
   hud.lastDrawerKey = key;
   const renderers = {
     worlds: renderWorldsPanel,
+    gear: renderGearPanel,
     team: renderTeamPanel,
+    pings: renderPingsPanel,
     chat: renderChatPanel,
     forum: renderForumPanel
   };
@@ -207,6 +226,7 @@ function renderDrawer(hud, state) {
 
 function renderWorldsPanel(state) {
   const leader = updateLeaderboard(state).entry;
+  const zoneDistance = Math.max(0, Math.round(Math.hypot(state.player.x - state.zone.x, state.player.y - state.zone.y) - state.zone.radius));
   const worldButtons = WORLDS.map((world) => {
     const worldState = state.worlds.find((item) => item.id === world.id);
     return `<button class="hud-button" data-teleport="${world.id}">${world.shortName} ${Math.floor(worldState.progress)}%</button>`;
@@ -220,9 +240,29 @@ function renderWorldsPanel(state) {
       <div class="teleport-grid">${worldButtons}</div>
       <h3>Leaderboard Score</h3>
       <p>${leader.score} points from worlds, skill, team level, and reward score.</p>
+      <h3>World Corruption</h3>
+      <p>Stage ${state.zone.stage}. Radius ${Math.round(state.zone.radius)}m. ${zoneDistance ? `${zoneDistance}m outside safe magic.` : "Inside safe magic."}</p>
       <h3>Rewards</h3>
       <ul class="mini-list">${rewards}</ul>
       <button class="hud-button" data-action="reset">New fighter</button>
+    </section>
+  `;
+}
+
+function renderGearPanel(state) {
+  const artifacts = state.artifacts.map((artifact) => `
+    <li>
+      <strong>${artifact.name}</strong> ${artifact.charges}/${artifact.maxCharges}<br>
+      ${artifact.description}
+      <button class="hud-button" data-artifact="${artifact.id}">Use</button>
+    </li>
+  `).join("");
+  return `
+    <section class="panel-section">
+      <h2>Auto-Loot Gear</h2>
+      <p>Armor L${state.supplies.armorLevel}. Potions ${state.supplies.potions}. Crystals ${state.supplies.crystals}. Auto-looted ${state.survival.autoLooted} drops.</p>
+      <h3>Tactical Artifacts</h3>
+      <ul class="mini-list">${artifacts}</ul>
     </section>
   `;
 }
@@ -238,9 +278,29 @@ function renderTeamPanel(state) {
       <h2>${state.profile.mode === "team" ? "Four Heroes" : "Solo Legend"}</h2>
       <p>Team level ${state.team.level}. Temporary allies: ${state.team.temporaryAllies}.</p>
       <ul class="mini-list">${members}</ul>
+      <h3>Revive Shrines</h3>
+      <p>${state.reviveShrines.filter((shrine) => shrine.active).length} active shrines. Recalls used: ${state.survival.recallsUsed}.</p>
+      <button class="hud-button" data-action="recall">Soul recall</button>
       <h3>Enemy Command</h3>
       <p>Commander now hunted: ${state.cast.commanders[state.stats.worldsConquered] || "final gate cleared"}.</p>
       <p>Demon king prophecy: ${state.cast.demonKings[state.stats.worldsConquered % state.cast.demonKings.length]}.</p>
+    </section>
+  `;
+}
+
+function renderPingsPanel(state) {
+  const pingButtons = Object.entries(getPingTypes()).map(([kind, ping]) => (
+    `<button class="hud-button" data-ping="${kind}">${ping.label}</button>`
+  )).join("");
+  const recent = state.pings.length
+    ? state.pings.slice(-4).reverse().map((ping) => `<li><strong>${ping.text}</strong><br>${Math.ceil(ping.life / 1000)}s remaining</li>`).join("")
+    : "<li>No active pings.</li>";
+  return `
+    <section class="panel-section">
+      <h2>Squad Pings</h2>
+      <div class="teleport-grid">${pingButtons}</div>
+      <h3>Active Marks</h3>
+      <ul class="mini-list">${recent}</ul>
     </section>
   `;
 }
@@ -286,11 +346,15 @@ function renderModal(hud, state) {
   hud.lastModalKey = modalKey;
 
   if (state.deathState) {
+    const recallButton = state.profile.mode === "team" && state.deathState.type === "team-member"
+      ? '<button class="hud-button" data-action="recall">Spend soul recall</button>'
+      : "";
     hud.fields.modal.innerHTML = `
       <div class="death-panel">
         <h2>Defeated</h2>
         <p>${state.deathState.message}</p>
         <p>Revive time: ${formatTime(state.deathState.reviveAt)}</p>
+        ${recallButton}
         <button class="hud-button" data-action="reset">New fighter</button>
       </div>
     `;
@@ -338,6 +402,24 @@ export function bindHudCommands(stateRef, sceneCommands) {
       const choice = state.pendingStory?.find((item) => item.id === choiceId);
       if (!choice) return;
       const next = applyStoryChoice(state, choice);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
+    },
+    useArtifact: (artifactId) => {
+      const next = useArtifact(stateRef.get(), artifactId);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
+    },
+    ping: (kind) => {
+      const next = sendPing(stateRef.get(), kind);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
+    },
+    recall: () => {
+      const next = recallAtShrine(stateRef.get());
       stateRef.set(next);
       saveState(next);
       sceneCommands.render();

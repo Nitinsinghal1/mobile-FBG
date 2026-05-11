@@ -1,6 +1,7 @@
 import { WORLDS, WORLD_SIZE } from "../content/worlds.js";
 import { assignNarrativeCast, createAdaptiveMemory, selectMagicPower } from "./systems/aiDirector.js";
 import { spawnWorldEntities } from "./systems/combat.js";
+import { createSurvivalState, hydrateSurvivalState } from "./systems/survival.js";
 
 export function createProfile({ codename, mode = "solo", instinct = "strategist" }) {
   const safeName = String(codename || "Wanderer").trim().slice(0, 18) || "Wanderer";
@@ -39,6 +40,7 @@ export function createGameState(profile) {
       reviveAt: 0,
       spawnProtected: true
     },
+    ...createSurvivalState(WORLDS[0].id),
     team: createTeam(profile.mode, cast.companions),
     monsters: [],
     projectiles: [],
@@ -60,7 +62,10 @@ export function createGameState(profile) {
       monstersDefeated: 0,
       worldsConquered: 0,
       rewardScore: 0,
-      deaths: 0
+      deaths: 0,
+      pings: 0,
+      artifactsUsed: 0,
+      survivalMs: 0
     },
     chat: {
       team: [
@@ -80,6 +85,28 @@ export function createGameState(profile) {
     time: 0
   };
   state.monsters = spawnWorldEntities(state, state.currentWorldId);
+  return state;
+}
+
+export function normalizeGameState(savedState) {
+  if (!savedState?.profile) return null;
+  const state = hydrateSurvivalState(savedState);
+  state.version = Math.max(2, state.version || 1);
+  state.worlds ||= WORLDS.map((world) => ({
+    id: world.id,
+    progress: 0,
+    conquered: false,
+    spawned: false
+  }));
+  state.projectiles ||= [];
+  state.floaters ||= [];
+  state.inventory ||= [];
+  state.cooldowns ||= { attack: 0, ability: 0 };
+  state.chat ||= { team: [], forum: [] };
+  state.leaderboardScore ||= 0;
+  state.toast ||= "";
+  state.toastTimer ||= 0;
+  state.time ||= 0;
   return state;
 }
 

@@ -11,7 +11,7 @@ function walk(dir) {
     const full = join(dir, entry);
     const stats = statSync(full);
     if (stats.isDirectory()) {
-      if (!["vendor", ".git", "node_modules"].includes(entry)) walk(full);
+      if (!["vendor", ".git", ".publish", "node_modules"].includes(entry)) walk(full);
       continue;
     }
     if ((entry.endsWith(".js") || entry.endsWith(".mjs")) && !skip.has(entry)) files.push(full);

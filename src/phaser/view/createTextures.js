@@ -5,6 +5,9 @@ export function createTextures(scene) {
   makeCircle(scene, "monster-tank", 40, 0xf4c15d, 0x453516);
   makeCircle(scene, "commander", 58, 0x8d6cff, 0x20163f);
   makeCircle(scene, "projectile", 18, 0xf3f7ff, 0x83a9ff);
+  makeCircle(scene, "loot-drop", 24, 0x5ec6a8, 0x12352c);
+  makeCircle(scene, "revive-shrine", 54, 0xf4c15d, 0x4b3610);
+  makeCircle(scene, "ping-marker", 30, 0xf3f7ff, 0xe85d75);
   makeDiamond(scene, "dungeon-seal", 120, 0xf4c15d);
 }
 

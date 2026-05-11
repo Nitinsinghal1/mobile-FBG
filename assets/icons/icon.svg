@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Four Worlds Battleground icon">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c2630"/>
+      <stop offset="1" stop-color="#10151b"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4c15d"/>
+      <stop offset=".45" stop-color="#5ec6a8"/>
+      <stop offset="1" stop-color="#83a9ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#sky)"/>
+  <circle cx="256" cy="256" r="178" fill="none" stroke="url(#ring)" stroke-width="28"/>
+  <path d="M256 90 312 210 446 224 348 316 374 448 256 382 138 448 164 316 66 224 200 210Z" fill="#f3f7ff" opacity=".92"/>
+  <circle cx="256" cy="256" r="66" fill="#10151b"/>
+  <path d="M256 164 286 250 372 256 302 308 322 390 256 344 190 390 210 308 140 256 226 250Z" fill="#e85d75"/>
+</svg>

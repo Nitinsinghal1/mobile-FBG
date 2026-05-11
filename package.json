@@ -1,0 +1,12 @@
+{
+  "name": "four-worlds-battleground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mobile-first Phaser PWA vertical slice for a magic battle-royale conquest game.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node tests/simulation.test.mjs",
+    "check": "node scripts/check-syntax.mjs"
+  }
+}

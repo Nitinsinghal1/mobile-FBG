@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#10151b" />
+    <meta
+      name="description"
+      content="Four Worlds Battleground is a mobile-first magic battle royale conquest prototype."
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/assets/icons/icon.svg" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <title>Four Worlds Battleground</title>
+  </head>
+  <body>
+    <main id="app-shell">
+      <section id="account-screen" class="screen is-active" aria-labelledby="account-title">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <h1 id="account-title">Four Worlds Battleground</h1>
+        <p class="lead">
+          Create a fighter, let the fate engine assign a magic bloodline, then conquer four living worlds.
+        </p>
+        <form id="account-form" class="account-form">
+          <label>
+            Codename
+            <input id="codename" name="codename" maxlength="18" minlength="2" autocomplete="nickname" required />
+          </label>
+          <div class="field-group" role="radiogroup" aria-label="Squad mode">
+            <label><input type="radio" name="mode" value="solo" checked /> Solo legend</label>
+            <label><input type="radio" name="mode" value="team" /> Team of heroes</label>
+          </div>
+          <label>
+            Instinct
+            <select id="instinct" name="instinct">
+              <option value="aggressive">Aggressive striker</option>
+              <option value="protector">Protector</option>
+              <option value="hunter">Monster hunter</option>
+              <option value="strategist">Strategist</option>
+            </select>
+          </label>
+          <button class="primary-action" type="submit">Create fighter</button>
+        </form>
+      </section>
+
+      <section id="game-screen" class="screen" aria-label="Game">
+        <div id="game-root" aria-label="Playable game canvas"></div>
+        <div id="hud-root" aria-live="polite"></div>
+      </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+    <script type="module" src="/src/main.js?v=6"></script>
+  </body>
+</html>

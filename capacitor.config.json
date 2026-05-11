@@ -1,0 +1,22 @@
+{
+  "appId": "com.fourbattleground.game",
+  "appName": "Four Worlds Battleground",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "path": "android",
+    "packageName": "com.fourbattleground.game"
+  },
+  "ios": {
+    "path": "ios"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#10151b"
+    }
+  }
+}

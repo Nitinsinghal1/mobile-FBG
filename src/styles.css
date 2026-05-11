@@ -490,6 +490,148 @@ h1 {
   color: var(--text);
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--line);
+  transition: all 160ms ease;
+  cursor: pointer;
+}
+
+.choice-grid button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+/* Inventory & Equipment Styles */
+.equipment-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.equipment-slot {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  min-height: 100px;
+}
+
+.equipment-slot.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-style: italic;
+  min-height: 60px;
+}
+
+.equipment-slot strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.equipment-slot .rarity {
+  font-weight: 600;
+  text-transform: capitalize;
+  font-size: 0.85rem;
+}
+
+.equipment-slot .small {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 6px 0;
+}
+
+.equipment-slot button {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px;
+  font-size: 0.8rem;
+}
+
+.inventory-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.inventory-list li {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.inventory-list li.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-style: italic;
+  min-height: 40px;
+}
+
+.inventory-list strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.inventory-list .rarity {
+  font-weight: 600;
+  text-transform: capitalize;
+  font-size: 0.8rem;
+  margin-left: 6px;
+}
+
+.inventory-list .small {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 4px 0 8px 0;
+}
+
+.item-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.item-actions button {
+  flex: 1;
+  min-width: 50px;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: all 120ms ease;
+}
+
+.item-actions button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.item-actions button.danger {
+  background: rgba(232, 93, 117, 0.2);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.item-actions button.danger:hover {
+  background: rgba(232, 93, 117, 0.35);
+}
+
+.hud-button.micro {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  min-width: auto;
+}
+
+.hud-button.small {
+  width: 100%;
+  padding: 6px;
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
   text-align: left;
 }
 

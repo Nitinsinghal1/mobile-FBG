@@ -3,6 +3,8 @@ import { applyStoryChoice, updateLeaderboard } from "../game/simulation/systems/
 import { chooseNpcEvent } from "../game/simulation/systems/aiDirector.js";
 import { getPingTypes, recallAtShrine, sendPing, useArtifact } from "../game/simulation/systems/survival.js";
 import { saveLeaderboardEntry, saveState, clearState } from "../game/simulation/persistence.js";
+import { getRarityColor } from "../game/content/items.js";
+import { equipItem, useConsumable, dropItem, unequipItem } from "../game/simulation/systems/inventory.js";
 
 export function createHud(root, state, commands) {
   root.innerHTML = `
@@ -115,6 +117,10 @@ function wireHud(hud) {
     const choice = button.dataset.choice;
     const artifact = button.dataset.artifact;
     const ping = button.dataset.ping;
+    const equip = button.dataset.equip;
+    const use = button.dataset.use;
+    const drop = button.dataset.drop;
+    const unequip = button.dataset.unequip;
 
     if (action === "menu") {
       hud.drawerOpen = !hud.drawerOpen;
@@ -146,6 +152,14 @@ function wireHud(hud) {
       hud.commands.useArtifact(artifact);
     } else if (ping) {
       hud.commands.ping(ping);
+    } else if (equip !== undefined) {
+      hud.commands.equipItem(parseInt(equip));
+    } else if (use !== undefined) {
+      hud.commands.useConsumable(parseInt(use));
+    } else if (drop !== undefined) {
+      hud.commands.dropItem(parseInt(drop));
+    } else if (unequip) {
+      hud.commands.unequipItem(unequip);
     }
   });
 
@@ -250,19 +264,80 @@ function renderWorldsPanel(state) {
 }
 
 function renderGearPanel(state) {
+  const { equipped = {}, inventory = [] } = state;
+  
+  // Equipped items display
+  const equippedHtml = `
+    <div class="equipment-slots">
+      ${equipped.weapon ? `
+        <div class="equipment-slot weapon">
+          <strong>${equipped.weapon.name}</strong>
+          <span class="rarity" style="color: ${getRarityColor(equipped.weapon.rarity)}">${equipped.weapon.rarity}</span>
+          <p class="small">${equipped.weapon.description}</p>
+          <button class="hud-button small" data-unequip="weapon">Unequip</button>
+        </div>
+      ` : '<div class="equipment-slot empty">No weapon equipped</div>'}
+      ${equipped.armor ? `
+        <div class="equipment-slot armor">
+          <strong>${equipped.armor.name}</strong>
+          <span class="rarity" style="color: ${getRarityColor(equipped.armor.rarity)}">${equipped.armor.rarity}</span>
+          <p class="small">${equipped.armor.description}</p>
+          <button class="hud-button small" data-unequip="armor">Unequip</button>
+        </div>
+      ` : '<div class="equipment-slot empty">No armor equipped</div>'}
+      ${equipped.outfit ? `
+        <div class="equipment-slot outfit">
+          <strong>${equipped.outfit.name}</strong>
+          <span class="rarity" style="color: ${getRarityColor(equipped.outfit.rarity)}">${equipped.outfit.rarity}</span>
+          <p class="small">${equipped.outfit.description}</p>
+          <button class="hud-button small" data-unequip="outfit">Unequip</button>
+        </div>
+      ` : '<div class="equipment-slot empty">No outfit equipped</div>'}
+    </div>
+  `;
+  
+  // Inventory list
+  const inventoryHtml = inventory.length
+    ? inventory.map((item, idx) => `
+        <li data-inventory-index="${idx}">
+          <strong>${item.name}</strong> ${item.quantity ? `x${item.quantity}` : ''}
+          <span class="rarity" style="color: ${getRarityColor(item.rarity)}">${item.rarity}</span>
+          <p class="small">${item.description}</p>
+          <div class="item-actions">
+            ${item.type === "consumable" || item.id === "aether-potion" ? `<button class="hud-button micro" data-use="${idx}">Use</button>` : ''}
+            ${item.type === "armor" || item.type === "weapon" || item.type === "outfit" ? `<button class="hud-button micro" data-equip="${idx}">Equip</button>` : ''}
+            <button class="hud-button micro danger" data-drop="${idx}">Drop</button>
+          </div>
+        </li>
+      `).join('')
+    : '<li class="empty">Inventory empty</li>';
+  
+  // Tactical artifacts
   const artifacts = state.artifacts.map((artifact) => `
     <li>
-      <strong>${artifact.name}</strong> ${artifact.charges}/${artifact.maxCharges}<br>
-      ${artifact.description}
+      <strong>${artifact.name}</strong> ${artifact.charges}/${artifact.maxCharges}
+      <span class="rarity" style="color: ${getRarityColor(artifact.rarity)}">${artifact.rarity}</span>
+      <p class="small">${artifact.description}</p>
       <button class="hud-button" data-artifact="${artifact.id}">Use</button>
     </li>
-  `).join("");
+  `).join('');
+  
+  // Inventory stats
+  const inventoryStats = `${inventory.length} / ${24} slots`;
+  
   return `
     <section class="panel-section">
-      <h2>Auto-Loot Gear</h2>
-      <p>Armor L${state.supplies.armorLevel}. Potions ${state.supplies.potions}. Crystals ${state.supplies.crystals}. Auto-looted ${state.survival.autoLooted} drops.</p>
+      <h2>Equipped Gear</h2>
+      ${equippedHtml}
+      
+      <h3>Inventory (${inventoryStats})</h3>
+      <ul class="inventory-list">${inventoryHtml}</ul>
+      
       <h3>Tactical Artifacts</h3>
       <ul class="mini-list">${artifacts}</ul>
+      
+      <h3>Auto-Loot Stats</h3>
+      <p>Auto-looted ${state.survival.autoLooted} drops. Armor L${state.supplies?.armorLevel || 1}. Potions ${state.supplies?.potions || 0}. Crystals ${state.supplies?.crystals || 0}.</p>
     </section>
   `;
 }
@@ -439,6 +514,30 @@ export function bindHudCommands(stateRef, sceneCommands) {
     reset: () => {
       clearState();
       location.reload();
+    },
+    equipItem: (inventoryIndex) => {
+      const next = equipItem(stateRef.get(), inventoryIndex);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
+    },
+    useConsumable: (inventoryIndex) => {
+      const next = useConsumable(stateRef.get(), inventoryIndex);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
+    },
+    dropItem: (inventoryIndex) => {
+      const next = dropItem(stateRef.get(), inventoryIndex);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
+    },
+    unequipItem: (slot) => {
+      const next = unequipItem(stateRef.get(), slot);
+      stateRef.set(next);
+      saveState(next);
+      sceneCommands.render();
     }
   };
 }

@@ -2,6 +2,7 @@ import { WORLDS, WORLD_SIZE } from "../content/worlds.js";
 import { assignNarrativeCast, createAdaptiveMemory, selectMagicPower } from "./systems/aiDirector.js";
 import { spawnWorldEntities } from "./systems/combat.js";
 import { createSurvivalState, hydrateSurvivalState } from "./systems/survival.js";
+import { createInitialEquipment } from "./systems/inventory.js";
 
 export function createProfile({ codename, mode = "solo", instinct = "strategist" }) {
   const safeName = String(codename || "Wanderer").trim().slice(0, 18) || "Wanderer";
@@ -46,6 +47,7 @@ export function createGameState(profile) {
     projectiles: [],
     floaters: [],
     inventory: [],
+    equipped: createInitialEquipment(),
     cooldowns: {
       attack: 0,
       ability: 0
@@ -101,6 +103,7 @@ export function normalizeGameState(savedState) {
   state.projectiles ||= [];
   state.floaters ||= [];
   state.inventory ||= [];
+  state.equipped ||= createInitialEquipment();
   state.cooldowns ||= { attack: 0, ability: 0 };
   state.chat ||= { team: [], forum: [] };
   state.leaderboardScore ||= 0;

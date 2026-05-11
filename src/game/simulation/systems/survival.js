@@ -1,5 +1,6 @@
-import { artifactById, TACTICAL_ARTIFACTS } from "../../content/items.js";
+import { artifactById, TACTICAL_ARTIFACTS, LOOT_KINDS, ARMOR_TIERS } from "../../content/items.js";
 import { WORLD_SIZE, getWorld } from "../../content/worlds.js";
+import { addToInventory } from "./inventory.js";
 
 const ZONE_INTERVAL = 28000;
 const ZONE_MIN_RADIUS = 280;
@@ -291,31 +292,41 @@ function resolveAutoLoot(state) {
 }
 
 function applyLoot(state, loot) {
+  let itemToAdd = null;
+  
   if (loot.kind === "potion") {
+    itemToAdd = LOOT_KINDS.potion;
     if (state.player.hp < state.player.maxHp * 0.72) {
       state.player.hp = Math.min(state.player.maxHp, state.player.hp + 42);
       return { name: "used potion" };
     }
-    state.supplies.potions += loot.amount || 1;
-    return { name: "potion" };
-  }
-  if (loot.kind === "armor") {
-    if ((loot.armorLevel || 1) > state.supplies.armorLevel) state.supplies.armorLevel = loot.armorLevel;
-    return { name: `armor L${loot.armorLevel}` };
-  }
-  if (loot.kind === "crystal") {
-    state.supplies.crystals += loot.amount || 1;
+  } else if (loot.kind === "armor") {
+    if ((loot.armorLevel || 1) > (state.supplies.armorLevel || 0)) {
+      state.supplies.armorLevel = loot.armorLevel;
+      const armorTier = ARMOR_TIERS.find(a => a.armorValue >= (loot.armorLevel || 1) * 8);
+      itemToAdd = armorTier || ARMOR_TIERS[1];
+    } else {
+      return { name: "discarded armor" };
+    }
+  } else if (loot.kind === "crystal") {
+    itemToAdd = LOOT_KINDS.crystal;
     state.player.mana = Math.min(state.player.maxMana, state.player.mana + 24);
     rechargeFirstArtifact(state);
-    return { name: "mana crystal" };
-  }
-  if (loot.kind === "artifact") {
-    const artifact = state.artifacts.find((item) => item.id === loot.artifactId);
+  } else if (loot.kind === "artifact") {
     const definition = artifactById(loot.artifactId);
-    if (artifact) artifact.charges = Math.min(artifact.maxCharges, artifact.charges + 1);
-    else state.artifacts.push(createArtifact(definition.id, 1));
+    const artifact = state.artifacts.find((item) => item.id === loot.artifactId);
+    if (artifact) {
+      artifact.charges = Math.min(artifact.maxCharges, artifact.charges + 1);
+    } else {
+      state.artifacts.push(createArtifact(definition.id, 1));
+    }
     return { name: definition.name };
   }
+  
+  if (itemToAdd) {
+    return { name: itemToAdd.name };
+  }
+  
   return { name: "supplies" };
 }
 
